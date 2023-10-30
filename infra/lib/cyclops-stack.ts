@@ -1,4 +1,4 @@
-import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CfnOutput, DockerImage, Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { Architecture, Code, Function, FunctionUrlAuthType, LambdaInsightsVersion, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
@@ -9,9 +9,17 @@ export class CyclopsStack extends Stack {
 
         const webapp = new Function(this, 'Webapp', {
             runtime: Runtime.NODEJS_LATEST,
-            handler: 'server/index.handler',
-            code: Code.fromDockerBuild(`${__dirname}/../../webapp`, {
-                imagePath: '/workdir/.output',
+            handler: 'public/index.handler',
+            code: Code.fromAsset(`${__dirname}/../../webapp`, {
+                bundling: {
+                    image: DockerImage.fromRegistry('public.ecr.aws/docker/library/node:18'),
+                    workingDirectory: '/asset-input',
+                    user: 'root',
+                    command: ['bash', '-c', [
+                        'npm run build',
+                        'cp -r /asset-input/.output/* /asset-output/',
+                    ].join(' && ')],
+                },
             }),
             memorySize: 256,
             timeout: Duration.seconds(5),
