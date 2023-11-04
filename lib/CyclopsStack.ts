@@ -15,22 +15,38 @@ export class CyclopsStack extends Stack {
         super(scope, id, props);
         const { region, accountId } = new ScopedAws(this);
 
+        const authSecretName = `Cyclops-Secrets`;
+        const authSecretReadPolicy = new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['secretsmanager:DescribeSecret', 'secretsmanager:GetSecretValue'],
+            resources: [`arn:aws:secretsmanager:${region}:${accountId}:secret:${authSecretName}-*`],
+        });
+
+        // -----
+        // Nuxt3 server-side processor
+        // -----
         const server = new NodejsFunction(this, 'Server', {
             entry: `${__dirname}/../webapp/.output/server/index.mjs`,
             handler: 'handler',
             runtime: Runtime.NODEJS_LATEST,
             memorySize: 256,
             architecture: Architecture.ARM_64,
+            environment: {
+                AUTH_SECRET_NAME: authSecretName,
+            },
             bundling: {
                 banner: "import { createRequire } from 'module';const require = createRequire(import.meta.url);",
                 format: OutputFormat.ESM,
             },
         });
+        server.addToRolePolicy(authSecretReadPolicy);
         const appEndpoint = server.addFunctionUrl({
             authType: FunctionUrlAuthType.NONE,
         });
 
-        const authSecretName = `${server.functionName}-Secrets`;
+        // -----
+        // the function handling authentication info
+        // -----
         const authorizer = new NodejsFunction(this, 'Authorizer', {
             entry: `${__dirname}/IdpResponseHandler.ts`,
             runtime: Runtime.NODEJS_LATEST,
@@ -44,15 +60,14 @@ export class CyclopsStack extends Stack {
                 format: OutputFormat.ESM,
             },
         });
+        authorizer.addToRolePolicy(authSecretReadPolicy);
         const authEndpoint = authorizer.addFunctionUrl({
             authType: FunctionUrlAuthType.NONE,
         });
-        authorizer.addToRolePolicy(new PolicyStatement({
-            effect: Effect.ALLOW,
-            actions: ['secretsmanager:DescribeSecret', 'secretsmanager:GetSecretValue'],
-            resources: [`arn:aws:secretsmanager:${region}:${accountId}:secret:${authSecretName}-*`],
-        }));
 
+        // -----
+        // the bucket for static contents for client-side
+        // -----
         const bucket = new Bucket(this, 'Bucket', {
             publicReadAccess: false,
             blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
@@ -65,6 +80,9 @@ export class CyclopsStack extends Stack {
             destinationKeyPrefix: 'public'
         });
 
+        // -----
+        // the distribution for front-end
+        // -----
         const distribution = new Distribution(this, 'Distribution', {
             defaultBehavior: {
                 origin: new HttpOrigin(Fn.parseDomainName(appEndpoint.url)),
@@ -88,6 +106,9 @@ export class CyclopsStack extends Stack {
             }
         });
 
+        // -----
+        // the ID provider
+        // -----
         const authUrl = `https://${distribution.domainName}/oauth2/idpresponse`;
         const userPool = new UserPool(this, 'UserPool', {
             selfSignUpEnabled: false,
@@ -107,9 +128,13 @@ export class CyclopsStack extends Stack {
             }
         });
 
+        // -----
+        // the parameters include secret values
+        // -----
         const secret = new Secret(authorizer, 'Secrets', {
             secretName: authSecretName,
             secretObjectValue: {
+                signInUrl: SecretValue.unsafePlainText(authDomain.signInUrl(client, { redirectUri: authUrl })),
                 tokenEndpoint: SecretValue.unsafePlainText(`${authDomain.baseUrl()}/oauth2/token`),
                 userPoolClientId: SecretValue.unsafePlainText(client.userPoolClientId),
                 userPoolClientSecret: client.userPoolClientSecret,
@@ -117,6 +142,9 @@ export class CyclopsStack extends Stack {
             }
         });
 
+        // -----
+        // output values for usage of this application
+        // -----
         new CfnOutput(this, 'Auth00', {
             value: authDomain.signInUrl(client, { redirectUri: authUrl })
         });
