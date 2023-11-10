@@ -1,46 +1,67 @@
-import { Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
-import { Port, Vpc } from "aws-cdk-lib/aws-ec2";
-import { Cluster, ContainerImage, FargateService, FargateTaskDefinition, LogDriver } from "aws-cdk-lib/aws-ecs";
-import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
+import { CfnOutput, DockerImage, Fn, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CachePolicy, Distribution, OriginRequestPolicy, ViewerProtocolPolicy } from "aws-cdk-lib/aws-cloudfront";
+import { HttpOrigin, S3Origin } from "aws-cdk-lib/aws-cloudfront-origins";
+import { Architecture, Code, Function, FunctionUrlAuthType, Runtime } from "aws-cdk-lib/aws-lambda";
+import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
+import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
 import { Construct } from "constructs";
+import * as os from 'os';
 
 export class CyclopsStack extends Stack {
     constructor(scope: Construct, id: string, props: StackProps) {
         super(scope, id, props);
 
-        const vpc = Vpc.fromLookup(this, 'Vpc', { vpcId: 'vpc-0316bba888afa43c5' });
-        const cluster = Cluster.fromClusterAttributes(vpc, 'Cluster', { clusterName: 'default', vpc, });
-
-        const taskDefinition = new FargateTaskDefinition(this, 'TaskDefinition', {
-            cpu: 512, memoryLimitMiB: 1024,
+        const bucket = new Bucket(this, 'Bucket', {
+            blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
+            publicReadAccess: false,
+            removalPolicy: RemovalPolicy.DESTROY,
+            autoDeleteObjects: true,
         });
-        const main = taskDefinition.addContainer('main', {
-            image: ContainerImage.fromAsset(`${__dirname}/../../webapp`),
-            portMappings: [{ containerPort: 8080 }],
-            logging: LogDriver.awsLogs({
-                streamPrefix: 'Service',
-                logGroup: new LogGroup(cluster, 'LogGroup', {
-                    retention: RetentionDays.ONE_DAY,
-                    removalPolicy: RemovalPolicy.DESTROY,
-                }),
-            }),
-            startTimeout: Duration.seconds(60),
-            stopTimeout: Duration.seconds(10),
-            healthCheck: {
-                command: ['CMD-SHELL', 'test -e application.pid'],
-                interval: Duration.seconds(5),
-                timeout: Duration.seconds(3),
-                retries: 10,
-                startPeriod: Duration.seconds(5),
+        new BucketDeployment(bucket, 'Deployment', {
+            destinationBucket: bucket,
+            destinationKeyPrefix: '',
+            sources: [Source.asset(`${__dirname}/../../webapp`, {
+                bundling: {
+                    image: DockerImage.fromRegistry('public.ecr.aws/docker/library/node:18-slim'),
+                    volumes: [{ containerPath: '/.npm', hostPath: `${os.homedir()}/.npm`, }],
+                    command: ['bash', '-c', [
+                        'npm run build',
+                        'cp -r /asset-input/.output/public/_nuxt /asset-output',
+                    ].join(' && ')],
+                }
+            })],
+            retainOnDelete: false,
+        });
+
+        const webapp = new Function(this, 'Webapp', {
+            runtime: Runtime.NODEJS_18_X,
+            architecture: Architecture.ARM_64,
+            memorySize: 256,
+            code: Code.fromAsset(`${__dirname}/../../webapp/.output/server`),
+            handler: 'index.handler',
+            reservedConcurrentExecutions: 3,
+        });
+        const weburl = webapp.addFunctionUrl({
+            authType: FunctionUrlAuthType.NONE,
+        });
+
+        const distribution = new Distribution(this, 'Distribution', {
+            defaultBehavior: {
+                origin: new HttpOrigin(Fn.parseDomainName(weburl.url)),
+                cachePolicy: CachePolicy.CACHING_DISABLED,
+                viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+                originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
             },
+            additionalBehaviors: {
+                '/_nuxt/*': {
+                    origin: new S3Origin(bucket, { originPath: '',  }),
+                    cachePolicy: CachePolicy.CACHING_DISABLED,
+                    viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+                    originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+                }
+            }
         });
 
-        const service = new FargateService(cluster, 'Service', {
-            cluster, taskDefinition, assignPublicIp: true,
-            capacityProviderStrategies: [{ capacityProvider: 'FARGATE_SPOT', weight: 1, base: 0 }],
-            circuitBreaker: { rollback: true }, minHealthyPercent: 0, maxHealthyPercent: 200,
-            desiredCount: 1,
-        });
-        service.connections.allowFromAnyIpv4(Port.tcp(8080));
+        new CfnOutput(this, 'entrypoint', { value: `https://${distribution.domainName}` });
     }
 }

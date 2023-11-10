@@ -6,4 +6,4 @@ import { CyclopsStack } from '../lib/CyclopsStack';
 const app = new App();
 new CyclopsStack(app, 'CyclopsStack', {
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: 'ap-northeast-1' },
-})
+});
