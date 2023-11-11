@@ -4,12 +4,10 @@
             "path": "infra"
         },
         {
-            "path": "webapp"
-        },
-        {
-            "path": "functions"
+            "path": "server"
         }
-    ],
-    "settings": {
-    }
+        {
+            "path": "webapp"
+        }
+    ]
 }
