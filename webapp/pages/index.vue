@@ -1,4 +1,4 @@
 <template>
-    <h1>Cyclops</h1>
-    <p>This is a first page.</p>
+    <h1>Index</h1>
+    <p>This is an index page.</p>
 </template>
