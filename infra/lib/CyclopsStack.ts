@@ -1,5 +1,5 @@
 import { CfnOutput, DockerImage, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
-import { FunctionUrlAuthType, InvokeMode, Runtime } from "aws-cdk-lib/aws-lambda";
+import { FunctionUrlAuthType, InvokeMode, LambdaInsightsVersion, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
@@ -40,6 +40,9 @@ export class CyclopsStack extends Stack {
                 BUCKET_NAME: bucket.bucketName,
                 KEY_PREFIX: keyPrefix,
             },
+            memorySize: 256,
+            tracing: Tracing.ACTIVE,
+            insightsVersion: LambdaInsightsVersion.VERSION_1_0_229_0,
         });
         new LogGroup(webServer, 'LogGroup', {
             logGroupName: `/aws/lambda/${webServer.functionName}`,
