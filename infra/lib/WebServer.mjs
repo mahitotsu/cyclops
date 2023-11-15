@@ -1,6 +1,6 @@
-import { GetObjectCommand, S3Client, SelectObjectContentEventStreamFilterSensitiveLog } from '@aws-sdk/client-s3';
-import { pipeline } from "node:stream/promises";
+import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Readable } from 'node:stream';
+import { pipeline } from "node:stream/promises";
 
 const bucketName = process.env.BUCKET_NAME;
 const keyPrefix = process.env.KEY_PREFIX;
@@ -32,6 +32,14 @@ const get_object_key = (rawPath) => {
     return objKey;
 }
 
+const handle_auth_code = async (event, responseStream) => {
+    const rawPath = event.rawPath;
+    if (rawPath == '/oauth2/idpresponse') {
+        await response(200, { 'Content-Type': 'text/plain' },
+            Readable.from([JSON.stringify(event, null, 4)]), responseStream);
+    }
+}
+
 
 export const handler = awslambda.streamifyResponse(async (event, responseStream) => {
 
@@ -42,9 +50,24 @@ export const handler = awslambda.streamifyResponse(async (event, responseStream)
         return;
     }
 
-    const res = await new S3Client().send(new GetObjectCommand({
-        Bucket: bucketName,
-        Key: keyPrefix + get_object_key(rawPath),
-    }));
-    await response(200, { 'Content-Type': res.ContentType, }, res.Body, responseStream);
+    await handle_auth_code(event, responseStream);
+    if (responseStream.writableEnded) {
+        return;
+    }
+
+    try {
+        const res = await new S3Client().send(new GetObjectCommand({
+            Bucket: bucketName,
+            Key: keyPrefix + get_object_key(rawPath),
+        }));
+        await response(200, { 'Content-Type': res.ContentType, }, res.Body, responseStream);
+    } catch (e) {
+        if (e.code == 'NoSuchKey') {
+            await response(404, { 'Content-Type': 'text/plain', },
+                Readable.from(['Not found']), responseStream);
+        } else {
+            await response(500, { 'Content-Type': 'text/plain', },
+                Readable.from(['Internal Server Error']), responseStream);
+        }
+    }
 });

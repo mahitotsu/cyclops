@@ -1,4 +1,6 @@
-import { CfnOutput, DockerImage, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CfnOutput, DockerImage, Fn, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { AccountRecovery, Mfa, OAuthScope, UserPool } from "aws-cdk-lib/aws-cognito";
+import { Scope } from "aws-cdk-lib/aws-ecs";
 import { FunctionUrlAuthType, InvokeMode, LambdaInsightsVersion, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -53,6 +55,28 @@ export class CyclopsStack extends Stack {
         const webEndpoint = webServer.addFunctionUrl({
             authType: FunctionUrlAuthType.NONE,
             invokeMode: InvokeMode.RESPONSE_STREAM,
+        });
+
+        const userPool = new UserPool(this, 'UserPool', {
+            selfSignUpEnabled: false,
+            standardAttributes: { email: { required: true, mutable: false } },
+            autoVerify: { email: false },
+            signInAliases: { email: true },
+            mfa: Mfa.REQUIRED,
+            mfaSecondFactor: { otp: true, sms: false },
+            accountRecovery: AccountRecovery.EMAIL_ONLY,
+            removalPolicy: RemovalPolicy.DESTROY,
+        });
+        const userPoolDomain = userPool.addDomain('Domain', {
+            cognitoDomain: { domainPrefix: Fn.select(0, Fn.split('.', Fn.parseDomainName(webEndpoint.url))) },
+        });
+        const userClient = userPool.addClient('Client', {
+            generateSecret: true,
+            oAuth: {
+                flows: { authorizationCodeGrant: true, },
+                scopes: [OAuthScope.OPENID],
+                callbackUrls: [`${webEndpoint.url}oauth2/idpresponse`],
+            }
         });
 
         new CfnOutput(this, 'WebEndpoint', { value: webEndpoint.url });
