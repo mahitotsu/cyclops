@@ -1,9 +1,12 @@
 import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { Readable } from 'node:stream';
 import { pipeline } from "node:stream/promises";
+import { URLSearchParams } from 'node:url';
 
 const bucketName = process.env.BUCKET_NAME;
 const keyPrefix = process.env.KEY_PREFIX;
+const secretCachePort = process.env.PARAMETERS_SECRETS_EXTENSION_HTTP_PORT | 2773;
+const secretUrlPrefix = `http://localhost:${secretCachePort}/secretsmanager/get?secretId=`;
 
 const response = async (statusCode, headers, body, responseStream) => {
     await pipeline(body, awslambda.HttpResponseStream.from(responseStream, { statusCode, headers, }));
@@ -32,16 +35,39 @@ const get_object_key = (rawPath) => {
     return objKey;
 }
 
-const handle_auth_code = async (event, responseStream) => {
+const handle_auth_code = async (event, responseStream, context) => {
     const rawPath = event.rawPath;
     if (rawPath == '/oauth2/idpresponse') {
+        const { tokenEndpoint, clientId, clientSecret, redirectUrl }
+            = await fetch(`${secretUrlPrefix}${context.functionName}_Secret`, {
+                method: 'GET',
+                headers: { 'X-Aws-Parameters-Secrets-Token': process.env.AWS_SESSION_TOKEN },
+            })
+                .then(res => res.json())
+                .then(json => JSON.parse(json.SecretString));
+        const tokens = await fetch(tokenEndpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: (() => {
+                const params = new URLSearchParams();
+                const obj = {
+                    grant_type: 'authorization_code',
+                    client_id: clientId,
+                    client_secret: clientSecret,
+                    redirect_uri: redirectUrl,
+                    code: event.queryStringParameters.code
+                };
+                Object.keys(obj).forEach(key => params.append(key, obj[key]));
+                return params;
+            })(),
+        }).then(res => res.json());
         await response(200, { 'Content-Type': 'text/plain' },
-            Readable.from([JSON.stringify(event, null, 4)]), responseStream);
+            Readable.from([JSON.stringify(tokens, null, 4)]), responseStream);
     }
 }
 
 
-export const handler = awslambda.streamifyResponse(async (event, responseStream) => {
+export const handler = awslambda.streamifyResponse(async (event, responseStream, context) => {
 
     const rawPath = event.rawPath;
 
@@ -50,7 +76,7 @@ export const handler = awslambda.streamifyResponse(async (event, responseStream)
         return;
     }
 
-    await handle_auth_code(event, responseStream);
+    await handle_auth_code(event, responseStream, context);
     if (responseStream.writableEnded) {
         return;
     }

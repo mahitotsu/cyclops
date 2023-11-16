@@ -1,11 +1,12 @@
-import { CfnOutput, DockerImage, Fn, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CfnOutput, DockerImage, Fn, RemovalPolicy, SecretValue, Stack, StackProps } from "aws-cdk-lib";
 import { AccountRecovery, Mfa, OAuthScope, UserPool } from "aws-cdk-lib/aws-cognito";
-import { Scope } from "aws-cdk-lib/aws-ecs";
-import { FunctionUrlAuthType, InvokeMode, LambdaInsightsVersion, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
+import { Effect, PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { FunctionUrlAuthType, InvokeMode, LambdaInsightsVersion, ParamsAndSecretsLayerVersion, ParamsAndSecretsVersions, Runtime, Tracing } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { Construct } from "constructs";
 import * as os from 'os';
 
@@ -45,6 +46,8 @@ export class CyclopsStack extends Stack {
             memorySize: 256,
             tracing: Tracing.ACTIVE,
             insightsVersion: LambdaInsightsVersion.VERSION_1_0_229_0,
+            paramsAndSecrets: ParamsAndSecretsLayerVersion.fromVersionArn(
+                'arn:aws:lambda:ap-northeast-1:133490724326:layer:AWS-Parameters-and-Secrets-Lambda-Extension:11')
         });
         new LogGroup(webServer, 'LogGroup', {
             logGroupName: `/aws/lambda/${webServer.functionName}`,
@@ -52,6 +55,11 @@ export class CyclopsStack extends Stack {
             removalPolicy: RemovalPolicy.DESTROY,
         });
         bucket.grantRead(webServer);
+        webServer.role?.addToPrincipalPolicy(new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['secretsmanager:GetSecretValue'],
+            resources: ['*'],
+        }));
         const webEndpoint = webServer.addFunctionUrl({
             authType: FunctionUrlAuthType.NONE,
             invokeMode: InvokeMode.RESPONSE_STREAM,
@@ -70,13 +78,28 @@ export class CyclopsStack extends Stack {
         const userPoolDomain = userPool.addDomain('Domain', {
             cognitoDomain: { domainPrefix: Fn.select(0, Fn.split('.', Fn.parseDomainName(webEndpoint.url))) },
         });
+        const callbackUrl = `${webEndpoint.url}oauth2/idpresponse`;
         const userClient = userPool.addClient('Client', {
             generateSecret: true,
             oAuth: {
                 flows: { authorizationCodeGrant: true, },
                 scopes: [OAuthScope.OPENID],
-                callbackUrls: [`${webEndpoint.url}oauth2/idpresponse`],
+                callbackUrls: [callbackUrl],
             }
+        });
+
+        const secret = new Secret(webServer, 'Secret', {
+            secretName: `${webServer.functionName}_Secret`,
+            secretObjectValue: {
+                tokenEndpoint: SecretValue.unsafePlainText(`${userPoolDomain.baseUrl()}/oauth2/token`),
+                clientId: SecretValue.unsafePlainText(userClient.userPoolClientId),
+                clientSecret: userClient.userPoolClientSecret,
+                redirectUrl: SecretValue.unsafePlainText(callbackUrl),
+                signInUrl: SecretValue.unsafePlainText(userPoolDomain.signInUrl(userClient, {
+                    redirectUri: callbackUrl,
+                })),
+            },
+            removalPolicy: RemovalPolicy.DESTROY,
         });
 
         new CfnOutput(this, 'WebEndpoint', { value: webEndpoint.url });
