@@ -1,9 +1,11 @@
-import { RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
-import { Vpc } from "aws-cdk-lib/aws-ec2";
-import { Cluster, ContainerImage, FargateTaskDefinition, LogDriver } from "aws-cdk-lib/aws-ecs";
+import { Peer, Port, SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
+import { Cluster, ContainerImage, FargateService, FargateTaskDefinition, LogDriver } from "aws-cdk-lib/aws-ecs";
+import { CfnLoadBalancer, NetworkLoadBalancer, NetworkTargetGroup, Protocol, TargetType } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
-import { PublicHostedZone } from "aws-cdk-lib/aws-route53";
+import { ARecord, PublicHostedZone, RecordTarget } from "aws-cdk-lib/aws-route53";
+import { LoadBalancerTarget } from "aws-cdk-lib/aws-route53-targets";
 import { Construct } from "constructs";
 
 export class CyclopsStack extends Stack {
@@ -19,6 +21,8 @@ export class CyclopsStack extends Stack {
             'arn:aws:acm:ap-northeast-1:346929044083:certificate/da416a14-d9d8-42fb-9d91-9197d8f78d80');
 
         const containerPort = 8080;
+        const springPidFile = '/var/run/application.pid';
+
         const taskDefinition = new FargateTaskDefinition(this, 'ServerTaskDefinition', {
             cpu: 1024, memoryLimitMiB: 2048,
         });
@@ -32,6 +36,61 @@ export class CyclopsStack extends Stack {
                     removalPolicy: RemovalPolicy.DESTROY,
                 })
             }),
+            environment: {
+                SERVER_PORT: containerPort.toString(),
+                SPRING_PID_FILE: springPidFile,
+            },
+            healthCheck: {
+                command: ['CMD-SHELL', `test -e ${springPidFile}`],
+                interval: Duration.seconds(5),
+                timeout: Duration.seconds(2),
+                startPeriod: Duration.seconds(30),
+                retries: 6,
+            },
+            startTimeout: Duration.seconds(60),
+            stopTimeout: Duration.seconds(30),
         });
+
+        const service = new FargateService(cluster, 'ServerService', {
+            cluster, taskDefinition, assignPublicIp: true,
+            desiredCount: 1,
+            capacityProviderStrategies: [{ capacityProvider: 'FARGATE_SPOT', base: 0, weight: 1 }],
+            circuitBreaker: { rollback: true }, maxHealthyPercent: 200, minHealthyPercent: 0,
+        });
+
+        const nlbSg = new SecurityGroup(vpc, 'NLBSg', { vpc, allowAllOutbound: false });
+        const loadBalancer = new NetworkLoadBalancer(vpc, 'NLB', {
+            vpc, internetFacing: true,
+        });
+        (loadBalancer.node.defaultChild as CfnLoadBalancer).addPropertyOverride(
+            'SecurityGroups', [nlbSg.securityGroupId],
+        );
+        nlbSg.connections.allowTo(service, Port.tcp(containerPort));
+        service.connections.allowFrom(nlbSg, Port.tcp(containerPort));
+
+        const targetGroup = new NetworkTargetGroup(vpc, 'TargetGroup', {
+            vpc, port: containerPort, targetType: TargetType.IP,
+            targets: [service],
+            healthCheck: {
+                interval: Duration.seconds(5),
+                timeout: Duration.seconds(2),
+                healthyThresholdCount: 2,
+                unhealthyThresholdCount: 2,
+            },
+            deregistrationDelay: Duration.seconds(0),
+        });
+
+        const listenerPort = 443;
+        loadBalancer.addListener('ServerListener', {
+            port: listenerPort, protocol: Protocol.TLS, certificates: [certificate],
+            defaultTargetGroups: [targetGroup],
+        });
+        nlbSg.connections.allowFrom(Peer.anyIpv4(), Port.tcp(listenerPort));
+
+        const serverName = new ARecord(hostedZone, 'ServerName', {
+            zone: hostedZone, recordName: 'cyclops',
+            target: RecordTarget.fromAlias(new LoadBalancerTarget(loadBalancer)),
+        });
+        new CfnOutput(this, 'ServerUrl', { value: `https://${serverName.domainName}:443/` });
     }
 }
