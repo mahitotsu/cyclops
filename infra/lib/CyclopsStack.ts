@@ -1,5 +1,6 @@
 import { CfnOutput, Duration, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
+import { AccountRecovery, Mfa, OAuthScope, UserPool, UserPoolDomain } from "aws-cdk-lib/aws-cognito";
 import { Peer, Port, SecurityGroup, Vpc } from "aws-cdk-lib/aws-ec2";
 import { Cluster, ContainerImage, FargateService, FargateTaskDefinition, LogDriver } from "aws-cdk-lib/aws-ecs";
 import { CfnLoadBalancer, NetworkLoadBalancer, NetworkTargetGroup, Protocol, TargetType } from "aws-cdk-lib/aws-elasticloadbalancingv2";
@@ -22,6 +23,19 @@ export class CyclopsStack extends Stack {
 
         const containerPort = 8080;
         const springPidFile = '/var/run/application.pid';
+        const serverSubdomain = 'www';
+        const serverDomainName = `${serverSubdomain}.${hostedZone.zoneName}`
+
+        const userPool = UserPool.fromUserPoolId(this, 'UserPool', 'ap-northeast-1_Hk6zsJaNX');
+        const userPoolDomain = UserPoolDomain.fromDomainName(userPool, 'UserPoolDomain', 'https://auth.mahitotsu.com');
+        const userPoolClient = userPool.addClient('CyclopsClient', {
+            generateSecret: true,
+            oAuth: {
+                flows: { authorizationCodeGrant: true, implicitCodeGrant: false },
+                scopes: [OAuthScope.OPENID, OAuthScope.EMAIL],
+                callbackUrls: [`https://${serverDomainName}/login/oauth2/code/cognito`],
+            }
+        });
 
         const taskDefinition = new FargateTaskDefinition(this, 'ServerTaskDefinition', {
             cpu: 1024, memoryLimitMiB: 2048,
@@ -78,6 +92,7 @@ export class CyclopsStack extends Stack {
                 unhealthyThresholdCount: 2,
             },
             deregistrationDelay: Duration.seconds(0),
+            connectionTermination: true,
         });
 
         const listenerPort = 443;
@@ -87,10 +102,10 @@ export class CyclopsStack extends Stack {
         });
         nlbSg.connections.allowFrom(Peer.anyIpv4(), Port.tcp(listenerPort));
 
-        const serverName = new ARecord(hostedZone, 'ServerName', {
-            zone: hostedZone, recordName: 'cyclops',
+        new ARecord(hostedZone, 'ServerRecord', {
+            zone: hostedZone, recordName: serverSubdomain,
             target: RecordTarget.fromAlias(new LoadBalancerTarget(loadBalancer)),
         });
-        new CfnOutput(this, 'ServerUrl', { value: `https://${serverName.domainName}:443/` });
+        new CfnOutput(this, 'ServerUrl', { value: `https://${serverDomainName}:${listenerPort}/` });
     }
 }
