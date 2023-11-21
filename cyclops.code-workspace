@@ -1,5 +1,14 @@
 {
     "folders": [
+        {
+            "path": "infra"
+        },
+        {
+            "path": "front"
+        },
+        {
+            "path": "back"
+        }
     ],
     "settings": {
     }
