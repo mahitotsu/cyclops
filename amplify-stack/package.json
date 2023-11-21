@@ -1,16 +1,16 @@
 {
-  "name": "infra",
+  "name": "amplify-stack",
   "version": "0.1.0",
   "bin": {
-    "infra": "bin/infra.js"
+    "amplify-stack": "bin/amplify-stack.js"
   },
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "test": "jest",
     "cdk": "cdk"
   },
   "devDependencies": {
-    "@aws-cdk/aws-amplify-alpha": "^2.110.0-alpha.0",
     "@types/node": "20.9.0",
     "aws-cdk": "2.110.0",
     "ts-node": "^10.9.1",

@@ -1,13 +1,7 @@
 {
     "folders": [
         {
-            "path": "infra"
-        },
-        {
-            "path": "front"
-        },
-        {
-            "path": "back"
+            "path": "amplify-stack"
         }
     ],
     "settings": {
