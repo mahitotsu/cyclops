@@ -1,9 +1,5 @@
 {
-    "folders": [
-        {
-            "path": "amplify-stack"
-        }
-    ],
+    "folders": [],
     "settings": {
     }
 }
