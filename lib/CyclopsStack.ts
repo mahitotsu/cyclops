@@ -1,9 +1,15 @@
-import { CfnOutput, DockerImage, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
-import { CfnDistribution, CfnOriginAccessControl, Distribution, KeyGroup, PublicKey } from "aws-cdk-lib/aws-cloudfront";
-import { S3Origin } from "aws-cdk-lib/aws-cloudfront-origins";
+import { CfnOutput, DockerImage, Fn, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { Certificate } from "aws-cdk-lib/aws-certificatemanager";
+import { CachePolicy, CfnDistribution, CfnOriginAccessControl, Distribution, KeyGroup, OriginRequestPolicy, PublicKey, ResponseHeadersPolicy, ViewerProtocolPolicy } from "aws-cdk-lib/aws-cloudfront";
+import { HttpOrigin, S3Origin } from "aws-cdk-lib/aws-cloudfront-origins";
 import { Effect, PolicyStatement, ServicePrincipal } from "aws-cdk-lib/aws-iam";
+import { FunctionUrlAuthType, InvokeMode, ParamsAndSecretsLayerVersion, ParamsAndSecretsVersions } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { ARecord, PublicHostedZone, RecordTarget } from "aws-cdk-lib/aws-route53";
+import { CloudFrontTarget } from "aws-cdk-lib/aws-route53-targets";
 import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
 import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import { StringParameter } from "aws-cdk-lib/aws-ssm";
 import { Construct } from "constructs";
 
@@ -36,7 +42,7 @@ export class CyclopsStack extends Stack {
 
         const frontend = new Construct(this, 'FrontEnd');
         const pubKeyParam = StringParameter.fromStringParameterName(frontend, 'PubKeyParam', '/keypair/mahitotsu/public');
-        const publicKey = new PublicKey(frontend, 'PublicKey', { encodedKey: pubKeyParam.stringValue });
+        const publicKey = new PublicKey(frontend, 'PublicKey2', { encodedKey: pubKeyParam.stringValue });
         const keyGroup = new KeyGroup(frontend, 'KeyGroup', { items: [publicKey] });
         const oai = new CfnOriginAccessControl(frontend, 'OAI', {
             originAccessControlConfig: {
@@ -45,14 +51,44 @@ export class CyclopsStack extends Stack {
                 signingBehavior: 'always',
                 signingProtocol: 'sigv4',
             }
-        })
+        });
+
+        const hostedZone = PublicHostedZone.fromHostedZoneAttributes(this, 'HostedZone', {
+            hostedZoneId: 'Z00285912B2ULPDZAM9V9', zoneName: 'mahitotsu.com',
+        });
+        const certificate = Certificate.fromCertificateArn(this, 'Certificate',
+            `arn:aws:acm:us-east-1:${account}:certificate/053dc7b0-3805-42bd-8d17-28db8cc027bc`,
+        );
+        const webappSubDomain = 'www';
+        const webappDomain = `${webappSubDomain}.${hostedZone.zoneName}`;
+
+        const privateKeySecretName = '/keypair/mahitotsu/private';
+        const signer = new NodejsFunction(this, 'Signer', {
+            entry: `${__dirname}/Signer.mjs`,
+            paramsAndSecrets: ParamsAndSecretsLayerVersion.fromVersion(ParamsAndSecretsVersions.V1_0_103),
+            environment: {
+                CLOUDFRONT_KEY_PAIR_ID: publicKey.publicKeyId,
+                PRIVATE_KEY_SECRET_NAME: privateKeySecretName,
+                CLOUD_FRONT_DOMAIN: webappDomain,
+            },
+        });
+        Secret.fromSecretNameV2(signer, 'PrivateKeySecret', privateKeySecretName).grantRead(signer);
+        const signerUrl = signer.addFunctionUrl({
+            authType: FunctionUrlAuthType.NONE,
+            invokeMode: InvokeMode.BUFFERED,
+        });
+        new CfnOutput(this, 'SignerLocation', { value: signerUrl.url });
 
         const distribution = new Distribution(this, 'Distribution', {
             defaultBehavior: {
                 origin: new S3Origin(bucket, { originPath: keyPrefix, }),
                 trustedKeyGroups: [keyGroup],
+                cachePolicy: CachePolicy.CACHING_DISABLED,
+                viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+                originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
             },
             defaultRootObject: 'index.html',
+            domainNames: [webappDomain], certificate,
         });
         const cfnDist = distribution.node.defaultChild as CfnDistribution;
         cfnDist.addPropertyOverride('DistributionConfig.Origins.0.S3OriginConfig.OriginAccessIdentity', '');
@@ -69,6 +105,17 @@ export class CyclopsStack extends Stack {
             }
         }));
 
-        new CfnOutput(this, 'WebappLocation', { value: `https://${distribution.domainName}/` });
+        const loginPath = 'oauth2/idpresponse';
+        distribution.addBehavior(`/${loginPath}`, new HttpOrigin(Fn.parseDomainName(signerUrl.url)), {
+            cachePolicy: CachePolicy.CACHING_DISABLED,
+            viewerProtocolPolicy: ViewerProtocolPolicy.HTTPS_ONLY,
+            originRequestPolicy: OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        });
+
+        const webappRecord = new ARecord(distribution, 'WebappRecord', {
+            recordName: webappSubDomain, zone: hostedZone,
+            target: RecordTarget.fromAlias(new CloudFrontTarget(distribution)),
+        });
+        new CfnOutput(this, 'WebappLocation', { value: `https://${webappRecord.domainName}/${loginPath}` });
     }
 }
