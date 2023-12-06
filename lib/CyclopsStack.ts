@@ -7,12 +7,6 @@ export class CyclopsStack extends Stack {
     constructor(scope: Construct, id: string, props: StackProps) {
         super(scope, id, props);
 
-        /*
-        const webapp = new DockerImageFunction(this, 'Webapp', {
-            code: DockerImageCode.fromImageAsset(`${__dirname}/../frontend`),
-            memorySize: 256,
-        });
-        */
         const webapp = new Function(this, 'webapp', {
             runtime: Runtime.NODEJS_20_X,
             code: Code.fromAsset(`${__dirname}/../frontend`, {
