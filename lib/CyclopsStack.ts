@@ -9,19 +9,8 @@ export class CyclopsStack extends Stack {
         super(scope, id, props);
 
         const webapp = new Function(this, 'webapp', {
-            runtime: Runtime.NODEJS_20_X,
-            code: Code.fromAsset(`${__dirname}/../frontend`, {
-                bundling: {
-                    image: DockerImage.fromRegistry('public.ecr.aws/docker/library/node:20'),
-                    volumes: [{ containerPath: '/.npm', hostPath: `${os.homedir()}/.npm` }],
-                    command: ['bash', '-c', [
-                        'npm install',
-                        'npm run build',
-                        'cp -r /asset-input/.output /asset-output',
-                        'cp /asset-input/index.mjs /asset-output',
-                    ].join(' && ')],
-                }
-            }),
+            runtime: Runtime.NODEJS_LATEST,
+            code: Code.fromDockerBuild(`${__dirname}/../frontend`, { }),
             handler: 'index.handler',
             memorySize: 256,
         });
