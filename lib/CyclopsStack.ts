@@ -2,6 +2,7 @@ import { CfnOutput, DockerImage, RemovalPolicy, Stack, StackProps } from "aws-cd
 import { Code, DockerImageCode, DockerImageFunction, Function, FunctionUrlAuthType, InvokeMode, Runtime } from "aws-cdk-lib/aws-lambda";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Construct } from "constructs";
+import * as os from 'node:os'
 
 export class CyclopsStack extends Stack {
     constructor(scope: Construct, id: string, props: StackProps) {
@@ -12,6 +13,7 @@ export class CyclopsStack extends Stack {
             code: Code.fromAsset(`${__dirname}/../frontend`, {
                 bundling: {
                     image: DockerImage.fromRegistry('public.ecr.aws/docker/library/node:20'),
+                    volumes: [{ containerPath: '/.npm', hostPath: `${os.homedir()}/.npm` }],
                     command: ['bash', '-c', [
                         'npm install',
                         'npm run build',
