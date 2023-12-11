@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "build": "esbuild --bundle ./src/index.mjs --outdir=dist --platform=node --target=node18 --minify"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.9"
+  }
+}
