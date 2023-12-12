@@ -15,9 +15,10 @@ export class WebappStack extends Stack {
             autoDeleteObjects: true,
             removalPolicy: RemovalPolicy.DESTROY,
         });
+        const keyPrefix = 'public';
         new BucketDeployment(bucket, 'Deployment', {
             destinationBucket: bucket,
-            destinationKeyPrefix: 'public',
+            destinationKeyPrefix: keyPrefix,
             sources: [Source.asset(`${__dirname}/../01_frontend/`, {
                 bundling: {
                     image: DockerImage.fromRegistry('public.ecr.aws/docker/library/node:18'),
@@ -26,7 +27,7 @@ export class WebappStack extends Stack {
                     command: ['bash', '-c', [
                         'npm install',
                         'npm run build',
-                        'cp -r /asset-input/.output/public /asset-output'
+                        'cp -r /asset-input/.output/public/* /asset-output'
                     ].join(' && ')],
                 }
             })],
@@ -36,10 +37,15 @@ export class WebappStack extends Stack {
         const proxy = new NodejsFunction(this, 'Proxy', {
             runtime: Runtime.NODEJS_18_X,
             entry: `${__dirname}/../03_proxy/index.mjs`,
+            environment: {
+                BUCKET_NAME: bucket.bucketName,
+                KEY_PREFIX: keyPrefix,
+            },
             bundling: {
                 minify: true,
             }
         });
+        bucket.grantRead(proxy);
         new LogGroup(proxy, 'LogGroup', {
             logGroupName: `/aws/lambda/${proxy.functionName}`,
             retention: RetentionDays.ONE_DAY,
@@ -47,7 +53,7 @@ export class WebappStack extends Stack {
         });
         const location = proxy.addFunctionUrl({
             authType: FunctionUrlAuthType.NONE,
-            invokeMode: InvokeMode.BUFFERED,
+            invokeMode: InvokeMode.RESPONSE_STREAM,
         });
 
         new CfnOutput(this, 'ProxyLocation', { value: location.url });
