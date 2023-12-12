@@ -1,9 +1,11 @@
-import { CfnOutput, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
+import { CfnOutput, DockerImage, RemovalPolicy, Stack, StackProps } from "aws-cdk-lib";
 import { Code, Function, FunctionUrlAuthType, InvokeMode, Runtime } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
 import { Construct } from "constructs";
+import * as os from 'node:os';
 
 export class WebappStack extends Stack {
     constructor(scope: Construct, id: string, props: StackProps) {
@@ -16,13 +18,27 @@ export class WebappStack extends Stack {
         new BucketDeployment(bucket, 'Deployment', {
             destinationBucket: bucket,
             destinationKeyPrefix: 'public',
-            sources: [Source.asset(`${__dirname}/../01_frontend/.output/public`)],
+            sources: [Source.asset(`${__dirname}/../01_frontend/`, {
+                bundling: {
+                    image: DockerImage.fromRegistry('public.ecr.aws/docker/library/node:18'),
+                    volumes: [{ containerPath: '/.npm', hostPath: `${os.homedir()}/.npm}` }],
+                    workingDirectory: '/asset-input',
+                    command: ['bash', '-c', [
+                        'npm install',
+                        'npm run build',
+                        'cp -r /asset-input/.output/public /asset-output'
+                    ].join(' && ')],
+                }
+            })],
+            retainOnDelete: false,
         });
 
-        const proxy = new Function(this, 'Proxy', {
+        const proxy = new NodejsFunction(this, 'Proxy', {
             runtime: Runtime.NODEJS_18_X,
-            code: Code.fromAsset(`${__dirname}/../03_proxy/dist`),
-            handler: 'index.handler',
+            entry: `${__dirname}/../03_proxy/index.mjs`,
+            bundling: {
+                minify: true,
+            }
         });
         new LogGroup(proxy, 'LogGroup', {
             logGroupName: `/aws/lambda/${proxy.functionName}`,
