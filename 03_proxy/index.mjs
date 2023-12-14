@@ -2,15 +2,21 @@ import { GetObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { handler as frontend } from '../01_frontend/.output/server/index.mjs';
 import { promisify } from 'node:util';
 import { Readable, pipeline } from 'node:stream';
+import * as AWSXRay from 'aws-xray-sdk';
 
 const bucketName = process.env.BUCKET_NAME;
 const keyPrefix = process.env.KEY_PREFIX;
 
-const s3 = (async () => new S3Client())();
+const s3 = (async () => AWSXRay.captureAWSv3Client(new S3Client()))();
 
-exports.handler = awslambda.streamifyResponse(async (event, responseStream, _context) => {
+exports.handler = awslambda.streamifyResponse(async (event, responseStream, context) => {
+
+    console.log(JSON.stringify(event, null, 4));
+    console.log(JSON.stringify(context, null, 4));
 
     const rawPath = event.rawPath;
+
+    // static contents
     if (rawPath && rawPath.split('/').pop().indexOf('.') > 0) {
         return s3.then(client => client.send(new GetObjectCommand({
             Bucket: bucketName,
@@ -23,12 +29,15 @@ exports.handler = awslambda.streamifyResponse(async (event, responseStream, _con
                     'Content-Type': result.ContentType,
                     'Content-Length': result.ContentLength,
                     'ETag': result.ETag,
+                    'Expires': result.Expires,
+                    'LastModified': result.LastModified,
                 },
             })
         ));
     }
 
-    return frontend(event, _context).then(res => promisify(pipeline)(
+    // process server-side rendering
+    return frontend(event, context).then(res => promisify(pipeline)(
         Readable.from([res.body]),
         awslambda.HttpResponseStream.from(responseStream, {
             statusCode: res.statusCode,
