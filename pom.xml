@@ -41,7 +41,7 @@
             <version>2.21.1</version>
         </dependency>
 
-        <!-- only for build -->
+        <!-- for building -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
