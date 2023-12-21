@@ -10,7 +10,6 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 
-import com.mahitotsu.cyclops.webapp.ConversionServiceConfiguration;
 import com.mahitotsu.cyclops.webapp.TestContainerConfiguration;
 
 import jakarta.persistence.DiscriminatorValue;
@@ -23,8 +22,6 @@ import lombok.Data;
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 @Import({
         TestContainerConfiguration.class,
-        ConversionServiceConfiguration.class,
-        DocdbConfiguration.class,
 })
 public class ItemRepositoryTest {
 

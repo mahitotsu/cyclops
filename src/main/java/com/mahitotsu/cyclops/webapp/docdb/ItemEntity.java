@@ -3,9 +3,10 @@ package com.mahitotsu.cyclops.webapp.docdb;
 import java.io.Serializable;
 
 import org.hibernate.annotations.Type;
-import org.springframework.core.convert.ConversionService;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
 
 import jakarta.persistence.Basic;
@@ -30,11 +31,7 @@ import jakarta.persistence.Version;
 @DiscriminatorColumn(name = "type", discriminatorType = DiscriminatorType.STRING)
 public abstract class ItemEntity<T> {
 
-    private static ConversionService conversionService;
-
-    public static void setConversionService(final ConversionService conversionService) {
-        ItemEntity.conversionService = conversionService;
-    }
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     protected ItemEntity(final Class<T> itemType) {
         this.itemType = itemType;
@@ -78,10 +75,14 @@ public abstract class ItemEntity<T> {
     @PrePersist
     @PreUpdate
     private void valueToJson() {
-        this.data = (this.value == null ? null : ItemEntity.conversionService.convert(this.value, JsonNode.class));
+        this.data = (this.value == null ? null : ItemEntity.mapper.valueToTree(this.value));
     }
 
     private void jsonToValue() {
-        this.value = (this.data == null ? null : ItemEntity.conversionService.convert(this.data, this.itemType));
+        try {
+            this.value = (this.data == null ? null : ItemEntity.mapper.treeToValue(this.data, this.itemType));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Conversion from json to pojo failed.", e);
+        }
     }
 }
