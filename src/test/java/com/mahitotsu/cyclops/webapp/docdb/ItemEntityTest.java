@@ -2,7 +2,9 @@ package com.mahitotsu.cyclops.webapp.docdb;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,10 +36,14 @@ public class ItemEntityTest {
         json.put("key", "value");
         final ItemEntity e0 = new ItemEntity();
         e0.setJsonNode(json);
+        assertNull(e0.getCreatedDate());
+        assertNull(e0.getLastModifiedDate());
 
         // create
         final ItemEntity e1 = this.entityManager.persistFlushFind(e0);
         assertEquals(json, e1.getValue());
+        assertNotNull(e1.getCreatedDate());
+        assertNotNull(e1.getLastModifiedDate());
 
         // modifiy
         json.put("key", "newValue");
@@ -48,6 +54,9 @@ public class ItemEntityTest {
         // update
         final ItemEntity e2 = this.entityManager.persistFlushFind(e1);
         assertEquals(json, e2.getValue());
+        assertTrue(e2.getCreatedDate().equals(e1.getCreatedDate()));
+        assertTrue(e2.getLastModifiedDate().isAfter(e1.getLastModifiedDate()));
+        assertTrue(e2.getLastModifiedDate().isAfter(e2.getCreatedDate()));
 
         // delete
         this.entityManager.remove(e2);
