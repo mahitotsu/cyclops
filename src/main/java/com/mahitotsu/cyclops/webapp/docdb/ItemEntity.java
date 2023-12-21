@@ -19,8 +19,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 import jakarta.persistence.Version;
@@ -41,7 +39,7 @@ public abstract class ItemEntity<T> {
     private T value;
 
     @Transient
-    private Class<T> itemType;
+    private final Class<T> itemType;
 
     @Id
     @GeneratedValue
@@ -72,8 +70,10 @@ public abstract class ItemEntity<T> {
         this.value = value;
     }
 
-    @PrePersist
-    @PreUpdate
+    public void flush() {
+        this.valueToJson();
+    }
+
     private void valueToJson() {
         this.data = (this.value == null ? null : ItemEntity.mapper.valueToTree(this.value));
     }

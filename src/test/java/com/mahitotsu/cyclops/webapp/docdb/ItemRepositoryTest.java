@@ -1,13 +1,16 @@
 package com.mahitotsu.cyclops.webapp.docdb;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+
+import java.io.Serializable;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.context.annotation.Import;
 
 import com.mahitotsu.cyclops.webapp.TestContainerConfiguration;
@@ -26,10 +29,7 @@ import lombok.Data;
 public class ItemRepositoryTest {
 
     @Autowired
-    private ItemRepository itemRepository;
-
-    @Autowired
-    private TestEntityManager entityManager;
+    private ItemRepository repository;
 
     @Entity
     @DiscriminatorValue("TestItem")
@@ -48,19 +48,19 @@ public class ItemRepositoryTest {
     public void testCRUD() {
 
         final TestItem item = new TestItem();
-        item.setKey1("value1");
+        final TestItemEntity e0 = new TestItemEntity();
 
-        final TestItemEntity entity = new TestItemEntity();
-        entity.setValue(item);
+        // initialize entity
+        item.setKey1("value1");
+        e0.setValue(item);
 
         // create
-        this.itemRepository.save(entity);
-        this.entityManager.flush();
-        this.entityManager.clear();
+        final Serializable id = this.repository.putItem(e0).getId();
+        this.repository.flush();
 
-        // select - afeter create
-        final ItemEntity<?> e1 = this.itemRepository.findById(entity.getId()).get();
+        //
+        final ItemEntity<?> e1 = this.repository.findById(id).get();
+        assertInstanceOf(TestItemEntity.class, e1);
         assertEquals(item, e1.getValue());
-        this.entityManager.clear();
     }
 }
