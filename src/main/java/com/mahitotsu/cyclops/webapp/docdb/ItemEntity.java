@@ -2,7 +2,6 @@ package com.mahitotsu.cyclops.webapp.docdb;
 
 import java.io.Serializable;
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 import org.hibernate.annotations.Type;
 import org.springframework.data.annotation.CreatedDate;

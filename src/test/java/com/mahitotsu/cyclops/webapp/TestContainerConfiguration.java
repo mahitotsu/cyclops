@@ -11,6 +11,7 @@ public class TestContainerConfiguration {
 
     @Bean
     @ServiceConnection
+    @SuppressWarnings("resource")
     public PostgreSQLContainer<?> postgresqlContainer() {
         return new PostgreSQLContainer<>(DockerImageName.parse("public.ecr.aws/docker/library/postgres:15.3")
                 .asCompatibleSubstituteFor("postgres")).withReuse(false);
