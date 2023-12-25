@@ -1,4 +1,0 @@
-version: '3.0'
-services:
-  rdb:
-    image: icr.io/db2_community/db2
