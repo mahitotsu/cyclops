@@ -1,6 +1,7 @@
 <server>
 
     <featureManager>
+        <feature>jndi-1.0</feature>
         <feature>servlet-6.0</feature>
         <feature>jdbc-4.3</feature>
         <feature>springBoot-3.0</feature>
@@ -9,7 +10,10 @@
     <library id="lib.jdbc">
         <fileset dir="${shared.resource.dir}/jdbc" includes="*.jar" />
     </library>
-    <dataSource jndiName="jdbc/DataSource">
+    <dataSource id="jdbc.datasource" jndiName="jdbc/DataSource">
+        <jdbcDriver libraryRef="lib.jdbc" />
+        <properties URL="jdbc:h2:mem:db;MODE=DB2;DEFAULT_NULL_ORDERING=HIGH" user="sa"
+            password="" />
     </dataSource>
 
 </server>
