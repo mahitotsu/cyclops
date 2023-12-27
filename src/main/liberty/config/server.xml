@@ -2,7 +2,14 @@
 
     <featureManager>
         <feature>servlet-6.0</feature>
+        <feature>jdbc-4.3</feature>
         <feature>springBoot-3.0</feature>
     </featureManager>
+
+    <library id="lib.jdbc">
+        <fileset dir="${shared.resource.dir}/jdbc" includes="*.jar" />
+    </library>
+    <dataSource jndiName="jdbc/DataSource">
+    </dataSource>
 
 </server>
