@@ -1,1 +1,0 @@
-import{_ as s,v as t,t as n,L as c,x as e}from"./entry.24hOxcJm.js";const o={},a=e("h1",null,"Cyclops",-1),r=e("p",null,"This is the first page.",-1);function _(l,i){return n(),t(c,null,[a,r],64)}const f=s(o,[["render",_]]);export{f as default};

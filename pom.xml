@@ -49,10 +49,10 @@
                                 <exec dir="${nuxt3}" executable="npm">
                                     <arg line="run build" />
                                 </exec>
-                                <delete failonerror="false" verbose="true">
-                                    <fileset dir="${basedir}/src/main/webapp" includes="**/*" />
+                                <delete failonerror="false">
+                                    <fileset dir="${basedir}/src/main/resources/static" includes="**/*" />
                                 </delete>
-                                <copy todir="${basedir}/src/main/webapp" verbose="true">
+                                <copy todir="${basedir}/src/main/resources/static">
                                     <fileset dir="${nuxt3}/.output/public" includes="**/*" />
                                 </copy>
                             </target>
@@ -87,7 +87,6 @@
                 <version>3.10</version>
                 <configuration>
                     <deployPackages>project</deployPackages>
-                    <stripVersion>true</stripVersion>
                 </configuration>
             </plugin>
         </plugins>
