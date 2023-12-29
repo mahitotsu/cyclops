@@ -1,8 +1,5 @@
 {
     "files.exclude": {
-        "webapi": true,
-        "webui": true,
-        "webapp": true
     },
     "java.compile.nullAnalysis.mode": "automatic",
     "java.configuration.updateBuildConfiguration": "automatic"
