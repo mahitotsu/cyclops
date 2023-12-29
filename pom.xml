@@ -81,7 +81,10 @@
                         <configuration>
                             <target>
                                 <property name="nuxt3" value="${basedir}/src/main/nuxt3" />
-                                <property name="dist" value="${basedir}/src/main/resources/public" />
+                                <property name="dist" value="${basedir}/src/main/webapp" />
+                                <exec dir="${nuxt3}" executable="npm">
+                                    <arg line="install" />
+                                </exec>
                                 <exec dir="${nuxt3}" executable="npm">
                                     <arg line="run build" />
                                 </exec>

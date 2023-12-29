@@ -1,0 +1,12 @@
+version: '3'
+services:
+  webapp:
+    build:
+      context: ./
+    volumes:
+      - ~/.m2:/var/maven/.m2
+      - ~/.npm:/.npm
+      - ./:/workdir
+    ports:
+      - 9080:9080
+      - 9443:9443
