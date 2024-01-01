@@ -2,7 +2,8 @@ package com.mahitotsu.cyclops.webapp.data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.function.Supplier;
+import java.util.Random;
+import java.util.UUID;
 
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -26,14 +27,14 @@ import lombok.ToString;
 @EqualsAndHashCode
 @ToString
 @EntityListeners({ AuditingEntityListener.class })
-public abstract class AbstractEntityBase<ID extends Serializable> implements Serializable {
+public abstract class AbstractEntityBase implements Serializable {
 
-    protected abstract Supplier<ID> idSupplier();
+    private static final Random RANDOM = new Random();
 
     @Getter
     @Id
     @Column(name = "_id", unique = true, nullable = false, updatable = false)
-    private ID id;
+    private UUID id;
 
     @Getter
     @Version
@@ -64,6 +65,6 @@ public abstract class AbstractEntityBase<ID extends Serializable> implements Ser
 
     @PrePersist
     private void onPersist() {
-        this.id = this.idSupplier().get();
+        this.id = new UUID(System.nanoTime(), RANDOM.nextLong());
     }
 }
