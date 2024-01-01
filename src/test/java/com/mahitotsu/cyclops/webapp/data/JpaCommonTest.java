@@ -1,6 +1,7 @@
 package com.mahitotsu.cyclops.webapp.data;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -53,6 +54,7 @@ public class JpaCommonTest extends AbstractDataTestBase {
         // initialize
         final TestEntity e0 = new TestEntity();
         e0.setText("v0");
+        e0.setNumber(0);
         assertNull(e0.getId());
         assertNull(e0.getVersion());
         assertNull(e0.getCreatedDateTime());
@@ -73,6 +75,7 @@ public class JpaCommonTest extends AbstractDataTestBase {
 
         // modify
         e1.setText("v1");
+        e1.setNumber(1);
         final TestEntity e2 = this.entityManager.persistFlushFind(e1);
         assertEquals(Long.valueOf(1), e2.getVersion());
         assertTrue(e1.getCreatedDateTime().isBefore(e1.getLastModifiedDateTime()));
@@ -80,7 +83,7 @@ public class JpaCommonTest extends AbstractDataTestBase {
     }
 
     @Test
-    public void testValidation_CreateWithNullText() {
+    public void testValidation_ForCreate() {
 
         // init
         final TestEntity e0 = new TestEntity();
@@ -100,7 +103,7 @@ public class JpaCommonTest extends AbstractDataTestBase {
     }
 
     @Test
-    public void testValidation_CreateWithNegativeNumber() {
+    public void testValidation_ForDefault() {
 
         // init
         final TestEntity e0 = new TestEntity();
@@ -118,6 +121,57 @@ public class JpaCommonTest extends AbstractDataTestBase {
             final Set<ConstraintViolation<?>> violations = ConstraintViolationException.class.cast(e)
                     .getConstraintViolations();
             assertEquals(1, violations.size());
+        }
+    }
+
+    @Test
+    public void testValidation_ForUpdate() {
+
+        // init
+        final TestEntity e0 = new TestEntity();
+        e0.setText("");
+        assertNotNull(e0.getText());
+        assertTrue(e0.getText().isEmpty());
+
+        // create
+        final TestEntity e1 = this.entityManager.persistFlushFind(e0);
+
+        // update
+        e1.setNumber(1); // update only number field. -> the text field is still empty.
+        assertTrue(e1.getText().isEmpty());
+        assertNotEquals(e0, e1);
+
+        // An exception will be thrown
+        try {
+            this.entityManager.persistAndFlush(e1);
+            fail("The expected ConstraintViolationException was not thrown.");
+        } catch (Exception e) {
+            assertInstanceOf(ConstraintViolationException.class, e);
+            final Set<ConstraintViolation<?>> violations = ConstraintViolationException.class.cast(e)
+                    .getConstraintViolations();
+            assertEquals(1, violations.size());
+        }
+    }
+
+    @Test
+    public void testValidation_WithMultiViolation() {
+
+        // init
+        final TestEntity e0 = new TestEntity();
+        e0.setText(null);
+        e0.setNumber(-1);
+        assertNull(e0.getText());
+        assertTrue(Integer.valueOf(0).compareTo(e0.getNumber()) > 0);
+
+        // An exception will be thrown
+        try {
+            this.entityManager.persistAndFlush(e0);
+            fail("The expected ConstraintViolationException was not thrown.");
+        } catch (Exception e) {
+            assertInstanceOf(ConstraintViolationException.class, e);
+            final Set<ConstraintViolation<?>> violations = ConstraintViolationException.class.cast(e)
+                    .getConstraintViolations();
+            assertEquals(2, violations.size());
         }
     }
 }
