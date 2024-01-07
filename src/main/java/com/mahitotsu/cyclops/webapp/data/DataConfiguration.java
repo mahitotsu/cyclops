@@ -32,7 +32,7 @@ public class DataConfiguration implements BeanPostProcessor {
 
     @Bean
     public AuditorAware<String> auditorAware() {
-        return () -> Optional.of(TransactionSynchronizationManager.getCurrentTransactionName());
+        return () -> Optional.ofNullable(TransactionSynchronizationManager.getCurrentTransactionName());
     }
 
     @Override

@@ -49,8 +49,7 @@ public class AbstractEntityBase implements Serializable {
     private Long version;
 
     @CreatedBy
-    @Column(nullable = false, updatable = false)
-    @NotBlank
+    @Column(nullable = true, updatable = false)
     private String createdBy;
 
     @Temporal(TemporalType.TIMESTAMP)
@@ -60,8 +59,7 @@ public class AbstractEntityBase implements Serializable {
     private LocalDateTime createdDateTime;
 
     @LastModifiedBy
-    @Column(nullable = false)
-    @NotBlank
+    @Column(nullable = true)
     private String lastModifiedBy;
 
     @Temporal(TemporalType.TIMESTAMP)
