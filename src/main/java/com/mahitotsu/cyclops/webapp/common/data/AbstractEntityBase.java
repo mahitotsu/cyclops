@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.data;
+package com.mahitotsu.cyclops.webapp.common.data;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;

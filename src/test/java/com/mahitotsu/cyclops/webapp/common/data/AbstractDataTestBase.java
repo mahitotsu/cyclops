@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.data;
+package com.mahitotsu.cyclops.webapp.common.data;
 
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;

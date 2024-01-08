@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.data;
+package com.mahitotsu.cyclops.webapp.common.data;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -7,7 +7,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.mahitotsu.cyclops.webapp.data.validation.ForUpdate;
+import com.mahitotsu.cyclops.webapp.common.data.validation.ForUpdate;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;

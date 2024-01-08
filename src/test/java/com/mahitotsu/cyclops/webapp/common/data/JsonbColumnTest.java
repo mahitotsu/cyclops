@@ -1,73 +1,19 @@
-package com.mahitotsu.cyclops.webapp.data;
+package com.mahitotsu.cyclops.webapp.common.data;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.util.List;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.junit.jupiter.api.Test;
-
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.Inheritance;
-import jakarta.persistence.InheritanceType;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.Transient;
 import jakarta.transaction.Transactional;
-import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.ToString;
 
 public class JsonbColumnTest extends AbstractDataTestBase {
-
-    @Entity
-    @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
-    @NoArgsConstructor
-    @EqualsAndHashCode(callSuper = true)
-    @ToString(callSuper = true)
-    public static abstract class TestEntity<T> extends AbstractEntityBase {
-
-        @Transient
-        private ObjectMapper objectMapper;
-
-        private ObjectMapper getObjectMapper() {
-            if (this.objectMapper == null) {
-                this.objectMapper = new ObjectMapper();
-            }
-            return this.objectMapper;
-        }
-
-        @JdbcTypeCode(SqlTypes.JSON)
-        @Getter
-        @NotNull
-        private String jsonValue;
-
-        protected abstract Class<T> getValueType();
-
-        public T getValue() {
-            try {
-                return this.getObjectMapper().readValue(this.jsonValue, this.getValueType());
-            } catch (final JsonProcessingException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-
-        public void setValue(final T value) {
-            try {
-                this.jsonValue = this.getObjectMapper().writeValueAsString(value);
-            } catch (final JsonProcessingException e) {
-                throw new IllegalStateException(e);
-            }
-        }
-    }
 
     @Data
     public static class TextValue {
@@ -80,16 +26,16 @@ public class JsonbColumnTest extends AbstractDataTestBase {
     }
 
     @Entity
-    public static class TextEntity extends TestEntity<TextValue> {
-        public Class<TextValue> getValueType() {
-            return TextValue.class;
+    public static class TextEntity extends AbstractJsonEntity<TextValue> {
+        public TextEntity() {
+            super(TextValue.class);
         }
     }
 
     @Entity
-    public static class LongEntity extends TestEntity<LongValue> {
-        public Class<LongValue> getValueType() {
-            return LongValue.class;
+    public static class LongEntity extends AbstractJsonEntity<LongValue> {
+        public LongEntity() {
+            super(LongValue.class);
         }
     }
 
@@ -153,7 +99,7 @@ public class JsonbColumnTest extends AbstractDataTestBase {
 
         // find all
         final List<?> entities = this.entityManager.createQuery("""
-                select e from JsonbColumnTest$TestEntity e order by e.createdDateTime
+                select e from AbstractJsonEntity e order by e.createdDateTime
                  """.trim())
                 .getResultList();
         assertEquals(2, entities.size());

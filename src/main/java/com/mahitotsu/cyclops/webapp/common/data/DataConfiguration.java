@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.data;
+package com.mahitotsu.cyclops.webapp.common.data;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -14,10 +14,12 @@ import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.orm.jpa.AbstractEntityManagerFactoryBean;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.Assert;
 
-import com.mahitotsu.cyclops.webapp.data.validation.ForCreate;
-import com.mahitotsu.cyclops.webapp.data.validation.ForDelete;
-import com.mahitotsu.cyclops.webapp.data.validation.ForUpdate;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mahitotsu.cyclops.webapp.common.data.validation.ForCreate;
+import com.mahitotsu.cyclops.webapp.common.data.validation.ForDelete;
+import com.mahitotsu.cyclops.webapp.common.data.validation.ForUpdate;
 
 import jakarta.validation.groups.Default;
 
@@ -25,12 +27,18 @@ import jakarta.validation.groups.Default;
 @EnableJpaAuditing(modifyOnCreate = true, auditorAwareRef = "auditorAware", dateTimeProviderRef = "dateTimeProvider")
 public class DataConfiguration implements BeanPostProcessor {
 
+    private static ObjectMapper managedObjectMapper;
+
+    public static Optional<ObjectMapper> getManagedObjectMapper() {
+        return Optional.ofNullable(DataConfiguration.managedObjectMapper);
+    }
+
     @Bean(name = "dateTimeProvider")
     public DateTimeProvider dateTimeProvider() {
         return () -> Optional.of(LocalDateTime.now());
     }
 
-    @Bean
+    @Bean(name = "auditorAware")
     public AuditorAware<String> auditorAware() {
         return () -> Optional.ofNullable(TransactionSynchronizationManager.getCurrentTransactionName());
     }
@@ -53,5 +61,15 @@ public class DataConfiguration implements BeanPostProcessor {
                 Arrays.asList(Default.class, ForDelete.class).stream().map(c -> c.getCanonicalName())
                         .collect(Collectors.joining(",")));
         return factoryBean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(final Object bean, final String beanName) {
+        if (ObjectMapper.class.isInstance(bean)) {
+            Assert.isNull(DataConfiguration.managedObjectMapper,
+                    "Attempted to initialize a field but it was already set.");
+            DataConfiguration.managedObjectMapper = ObjectMapper.class.cast(bean);
+        }
+        return bean;
     }
 }
