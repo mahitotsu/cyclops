@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.common.data;
+package com.mahitotsu.cyclops.webapp.data;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
-import com.mahitotsu.cyclops.webapp.common.data.validation.ForUpdate;
+import com.mahitotsu.cyclops.webapp.data.validation.ForUpdate;
 
 import jakarta.persistence.Entity;
 import jakarta.validation.constraints.NotBlank;

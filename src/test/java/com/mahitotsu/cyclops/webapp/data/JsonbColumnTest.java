@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.common.data;
+package com.mahitotsu.cyclops.webapp.data;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotSame;
@@ -13,7 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 public class JsonbColumnTest extends AbstractDataTestBase {
 
@@ -33,21 +37,31 @@ public class JsonbColumnTest extends AbstractDataTestBase {
     }
 
     @Entity
-    public static class TextEntity extends AbstractJsonEntity<TextValue> {
+    @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+    @EqualsAndHashCode(callSuper = true)
+    @ToString(callSuper = true)
+    public static class TestEntity<T> extends AbstractJsonEntityBase<T> {
+        protected TestEntity(final Class<T> valueType) {
+            super(valueType);
+        }
+    }
+
+    @Entity
+    public static class TextEntity extends TestEntity<TextValue> {
         public TextEntity() {
             super(TextValue.class);
         }
     }
 
     @Entity
-    public static class LongEntity extends AbstractJsonEntity<LongValue> {
+    public static class LongEntity extends TestEntity<LongValue> {
         public LongEntity() {
             super(LongValue.class);
         }
     }
 
     @Entity
-    public static class DateTimeEntity extends AbstractJsonEntity<DateTimeValue> {
+    public static class DateTimeEntity extends TestEntity<DateTimeValue> {
         public DateTimeEntity() {
             super(DateTimeValue.class);
         }
@@ -110,7 +124,7 @@ public class JsonbColumnTest extends AbstractDataTestBase {
 
         // find all
         final List<?> entities = this.entityManager.getEntityManager().createQuery("""
-                select e from AbstractJsonEntity e order by e.createdDateTime
+                select e from JsonbColumnTest$TestEntity e order by e.createdDateTime
                  """.trim())
                 .getResultList();
         assertEquals(3, entities.size());

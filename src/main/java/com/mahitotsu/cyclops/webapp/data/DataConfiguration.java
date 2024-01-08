@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.common.data;
+package com.mahitotsu.cyclops.webapp.data;
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -17,9 +17,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.util.Assert;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mahitotsu.cyclops.webapp.common.data.validation.ForCreate;
-import com.mahitotsu.cyclops.webapp.common.data.validation.ForDelete;
-import com.mahitotsu.cyclops.webapp.common.data.validation.ForUpdate;
+import com.mahitotsu.cyclops.webapp.data.validation.ForCreate;
+import com.mahitotsu.cyclops.webapp.data.validation.ForDelete;
+import com.mahitotsu.cyclops.webapp.data.validation.ForUpdate;
 
 import jakarta.validation.groups.Default;
 

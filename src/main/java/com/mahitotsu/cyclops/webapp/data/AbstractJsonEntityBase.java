@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.webapp.common.data;
+package com.mahitotsu.cyclops.webapp.data;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
@@ -6,9 +6,7 @@ import org.hibernate.type.SqlTypes;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.Inheritance;
-import jakarta.persistence.InheritanceType;
+import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Transient;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -16,12 +14,11 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
 
-@Entity
-@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+@MappedSuperclass
 @RequiredArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
-public class AbstractJsonEntity<T> extends AbstractEntityBase {
+public class AbstractJsonEntityBase<T> extends AbstractEntityBase {
 
     @Transient
     private final Class<T> valueType;
