@@ -5,13 +5,12 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 
 import com.mahitotsu.cyclops.webapp.common.data.validation.ForUpdate;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.EqualsAndHashCode;
@@ -34,11 +33,10 @@ public class EntityBaseTest extends AbstractDataTestBase {
         private String value;
     }
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @Autowired
+    private TestEntityManager entityManager;
 
     @Test
-    @Transactional
     public void test_AssignIdAndVersion() {
 
         // initialize
@@ -48,15 +46,12 @@ public class EntityBaseTest extends AbstractDataTestBase {
         assertNull(e0.getVersion());
 
         // create
-        this.entityManager.persist(e0);
-        this.entityManager.flush();
-        TestEntity e1 = this.entityManager.find(TestEntity.class, e0.getId());
+        final TestEntity e1 = this.entityManager.persistFlushFind(e0);
         assertNotNull(e1.getId());
         assertNotNull(e1.getVersion());
     }
 
     @Test
-    @Transactional
     public void test_Auditing() {
 
         // initialize
@@ -68,9 +63,7 @@ public class EntityBaseTest extends AbstractDataTestBase {
         assertNull(e0.getLastModifiedDateTime());
 
         // create
-        this.entityManager.persist(e0);
-        this.entityManager.flush();
-        TestEntity e1 = this.entityManager.find(TestEntity.class, e0.getId());
+        final TestEntity e1 = this.entityManager.persistFlushFind(e0);
         assertNotNull(e1.getCreatedBy());
         assertNotNull(e1.getCreatedDateTime());
         assertNotNull(e1.getLastModifiedBy());
@@ -79,8 +72,7 @@ public class EntityBaseTest extends AbstractDataTestBase {
 
         // update
         e1.setValue("v1");
-        this.entityManager.flush();
-        TestEntity e2 = this.entityManager.find(TestEntity.class, e1.getId());
+        final TestEntity e2 = this.entityManager.persistFlushFind(e1);
         assertTrue(e2.getCreatedDateTime().isBefore(e2.getLastModifiedDateTime()));
     }
 }
