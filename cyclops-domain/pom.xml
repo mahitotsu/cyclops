@@ -11,10 +11,6 @@
     <artifactId>cyclops-domain</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation</artifactId>
-        </dependency>
         <!-- dev only-->
         <dependency>
             <groupId>org.projectlombok</groupId>
