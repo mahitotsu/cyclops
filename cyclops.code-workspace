@@ -7,6 +7,12 @@
             "path": "cyclops-api-spec"
         },
         {
+            "path": "cyclops-service"
+        },
+        {
+            "path": "cyclops-test"
+        },
+        {
             "path": "cyclops-customer"
         },
         {

@@ -1,4 +1,4 @@
-package com.mahitotsu.cyclops.customer.api;
+package com.mahitotsu.cyclops.customer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,7 +13,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 
 @RestController
-public class CustomerController implements CustomerApi.Server {
+public class CustomerController implements CustomerApi {
 
     private final Random random = new Random();
 
@@ -25,13 +25,9 @@ public class CustomerController implements CustomerApi.Server {
     @Override
     public CustomerId registerNewCustomer() {
 
-        final CustomerId customerId = new CustomerId();
-        customerId.setValue("12");
-        customerId.setValue(String.format("%08d", Double.valueOf(random.nextDouble() * 100000000).intValue()));
-
-        final CustomerInfo customerInfo = new CustomerInfo();
-        customerInfo.setId(customerId);
-        customerInfo.setActive(true);
+        final CustomerId customerId = CustomerId.builder()
+                .value(String.format("%08d", Double.valueOf(random.nextDouble() * 100000000).intValue())).build();
+        final CustomerInfo customerInfo = CustomerInfo.builder().id(customerId).active(true).build();
 
         final Set<ConstraintViolation<CustomerInfo>> violations = this.validator.validate(customerInfo);
         if (violations.isEmpty() == false) {
@@ -47,9 +43,9 @@ public class CustomerController implements CustomerApi.Server {
 
         final CustomerInfo customerInfo = this.customers.get(id);
         if (customerInfo != null) {
-            customerInfo.setActive(false);
+            final CustomerInfo newCustomerInfo = customerInfo.toBuilder().active(false).build();
+            this.customers.put(id, newCustomerInfo);
         }
-
         return;
     }
 
