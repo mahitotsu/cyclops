@@ -4,6 +4,9 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.support.RestClientAdapter;
 import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 
+import lombok.experimental.UtilityClass;
+
+@UtilityClass
 public class ApiClientUtils {
 
     public static <T> T createHttpServiceProxy( final Class<T> httpInterface, final String hostname, final int port) {
@@ -17,8 +20,5 @@ public class ApiClientUtils {
         final HttpServiceProxyFactory factory = HttpServiceProxyFactory.builderFor(adapter).build();
 
         return factory.createClient(httpInterface);
-    }
-
-    private ApiClientUtils() {
     }
 }

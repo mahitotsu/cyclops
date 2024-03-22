@@ -17,7 +17,11 @@ import com.mahitotsu.cyclops.customer.CustomerControllerTest.TestComponents;
 import com.mahitotsu.cyclops.service.ApiClientUtils;
 import com.mahitotsu.cyclops.test.TestContainersUtils;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = """
+       spring.jpa.open-in-view=false 
+       spring.jpa.generate-ddl=true
+       spring.jpa.show-sql=false
+        """)
 @ContextConfiguration(classes = { TestComponents.class })
 public class CustomerControllerTest {
 
