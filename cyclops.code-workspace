@@ -3,24 +3,6 @@
         {
             "path": "."
         },
-        {
-            "path": "cyclops-api-spec"
-        },
-        {
-            "path": "cyclops-service"
-        },
-        {
-            "path": "cyclops-test"
-        },
-        {
-            "path": "cyclops-customer"
-        },
-        {
-            "path": "cyclops-account"
-        },
-        {
-            "path": "cyclops-trade"
-        },
     ],
     "settings": {
         "java.compile.nullAnalysis.mode": "automatic"
