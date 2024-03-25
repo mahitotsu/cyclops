@@ -3,6 +3,12 @@
         {
             "path": "."
         },
+        {
+            "path": "./cyclops-api-specs"
+        },
+        {
+            "path": "./cyclops-openapi"
+        },
     ],
     "settings": {
         "java.compile.nullAnalysis.mode": "automatic"
