@@ -29,12 +29,13 @@ public interface TicketsApi {
     @Valid
     default TicketId createTicket(@NotBlank String title, @NotNull String description) {
         return null;
+
     }
 
     @PostExchange(url = "/update-ticket")
     default boolean updaeteTicket(@NotNull @Valid TicketId ticketId, @NotNull String description) {
         return false;
-    };
+    }
 
     @PostExchange(url = "/close-ticket")
     default boolean closeTicket(@NotNull @Valid TicketId ticketId) {

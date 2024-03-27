@@ -1,0 +1,71 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>cyclops-frontend</artifactId>
+    <packaging>pom</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>${project.parent.groupId}</groupId>
+            <artifactId>cyclops-openapi</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <parent>
+        <groupId>com.mahitotsu.cyclops</groupId>
+        <artifactId>cyclops-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../</relativePath>
+    </parent>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>generate-apiclient</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <tempfile property="openapi.json" destdir="${basedir}/target" createfile="true" deleteonexit="false" />
+                                <java classname="com.mahitotsu.cyclops.api.Main" fork="true" error="${openapi.json}">
+                                    <classpath refid="maven.runtime.classpath" />
+                                </java>
+                                <property name="webapp.dir" value="${basedir}/src/main/webapp" />
+                                <mkdir dir="${webapp.dir}/openapi" />
+                                <exec executable="npx" dir="${webapp.dir}">
+                                    <arg line="swagger-typescript-api -p ${openapi.json} -o ${webapp.dir}/openapi -n ApiClient.ts" />
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>build</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property name="webapp.dir" value="${basedir}/src/main/webapp" />
+                                <exec executable="npm" dir="${webapp.dir}">
+                                    <arg line="run build" />
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

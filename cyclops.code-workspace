@@ -9,6 +9,9 @@
         {
             "path": "./cyclops-openapi"
         },
+        {
+            "path": "./cyclops-frontend"
+        },
     ],
     "settings": {
         "java.compile.nullAnalysis.mode": "automatic"
