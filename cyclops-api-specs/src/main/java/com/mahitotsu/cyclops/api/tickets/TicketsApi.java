@@ -1,6 +1,5 @@
 package com.mahitotsu.cyclops.api.tickets;
 
-import java.util.Collections;
 import java.util.List;
 
 import org.springframework.web.service.annotation.HttpExchange;
@@ -15,30 +14,19 @@ public interface TicketsApi {
 
     @PostExchange(url = "/list-tickets")
     @NotNull
-    default List<@NotNull @Valid TicketDetails> listTickets() {
-        return Collections.emptyList();
-    }
+    List<@NotNull @Valid TicketDetails> listTickets();
 
     @PostExchange(url = "/describe-ticket")
     @Valid
-    default TicketDetails describeTicket(@NotNull @Valid TicketId ticketId) {
-        return null;
-    }
+    TicketDetails describeTicket(@NotNull @Valid TicketId ticketId);
 
     @PostExchange(url = "/create-ticket")
     @Valid
-    default TicketId createTicket(@NotBlank String title, @NotNull String description) {
-        return null;
-
-    }
+    TicketId createTicket(@NotBlank String title, @NotNull String description);
 
     @PostExchange(url = "/update-ticket")
-    default boolean updaeteTicket(@NotNull @Valid TicketId ticketId, @NotNull String description) {
-        return false;
-    }
+    boolean updaeteTicket(@NotNull @Valid TicketId ticketId, @NotNull String description);
 
     @PostExchange(url = "/close-ticket")
-    default boolean closeTicket(@NotNull @Valid TicketId ticketId) {
-        return false;
-    }
+    boolean closeTicket(@NotNull @Valid TicketId ticketId);
 }

@@ -236,8 +236,8 @@ export class HttpClient<SecurityDataType = unknown> {
 }
 
 /**
- * @title OpenAPI definition
- * @version v0
+ * @title Cyclops Sample APIs
+ * @version 0.0.1-SNAPSHOT
  * @baseUrl http://localhost:8080
  */
 export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDataType> {
@@ -245,7 +245,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags tickets-api-controller
+     * @tags $-proxy-51
      * @name UpdaeteTicket
      * @request POST:/api/tickets/update-ticket
      */
@@ -267,7 +267,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags tickets-api-controller
+     * @tags $-proxy-51
      * @name ListTickets
      * @request POST:/api/tickets/list-tickets
      */
@@ -281,7 +281,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags tickets-api-controller
+     * @tags $-proxy-51
      * @name DescribeTicket
      * @request POST:/api/tickets/describe-ticket
      */
@@ -297,7 +297,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags tickets-api-controller
+     * @tags $-proxy-51
      * @name CreateTicket
      * @request POST:/api/tickets/create-ticket
      */
@@ -319,7 +319,7 @@ export class Api<SecurityDataType extends unknown> extends HttpClient<SecurityDa
     /**
      * No description
      *
-     * @tags tickets-api-controller
+     * @tags $-proxy-51
      * @name CloseTicket
      * @request POST:/api/tickets/close-ticket
      */

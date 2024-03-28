@@ -36,7 +36,7 @@
                         </goals>
                         <configuration>
                             <target>
-                                <tempfile property="openapi.json" destdir="${basedir}/target" createfile="true" deleteonexit="false" />
+                                <tempfile property="openapi.json" destdir="${basedir}/target" prefix="openapi-" suffix=".json" createfile="true" deleteonexit="false" />
                                 <java classname="com.mahitotsu.cyclops.api.Main" fork="true" error="${openapi.json}">
                                     <classpath refid="maven.runtime.classpath" />
                                 </java>
