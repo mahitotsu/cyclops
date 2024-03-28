@@ -29,6 +29,21 @@
                 <version>3.1.0</version>
                 <executions>
                     <execution>
+                        <id>install</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property name="webapp.dir" value="${basedir}/src/main/webapp" />
+                                <exec executable="npm" dir="${webapp.dir}">
+                                    <arg line="install" />
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>generate-apiclient</id>
                         <phase>generate-sources</phase>
                         <goals>

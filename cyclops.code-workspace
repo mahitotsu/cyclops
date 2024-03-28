@@ -12,6 +12,9 @@
         {
             "path": "./cyclops-frontend"
         },
+        {
+            "path": "./cyclops-backend"
+        },
     ],
     "settings": {
         "java.compile.nullAnalysis.mode": "automatic"
